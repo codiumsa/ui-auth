@@ -5,12 +5,12 @@
    * Provider para configuracion ui.auth.
    *
    * @ngdoc service
-   * @name ui.auth.AuthConfigProvider
+   * @name ui.auth.AuthConfig
    * @description
-   * # AuthConfigProvider
+   * # AuthConfig
    */
   angular.module('ui.auth')
-    .provider('AuthConfigProvider', function () {
+    .provider('AuthConfig', function () {
 
       var options = {};
 
