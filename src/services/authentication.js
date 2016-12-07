@@ -1,65 +1,70 @@
-(function() {
-'use strict';
+(function () {
+  'use strict';
 
-/**
- * @ngdoc service
- * @name ui.auth.services.Authentication
- * @description
- * # Authentication
- * Service in the ui.auth.
- */
-angular
-  .module('ui.auth.services')
-  .service('AuthenticationService', AuthenticationService);
+  /**
+   * @ngdoc service
+   * @name ui.auth.services.Authentication
+   * @description
+   * # Authentication
+   * Service in the ui.auth.
+   */
+  angular
+    .module('ui.auth.services')
+    .service('AuthenticationService', AuthenticationService);
 
-AuthenticationService.$injec = ['$resource', '$rootScope', '$http', 'Config'];
+  AuthenticationService.$injec = ['$resource', 'AuthConfig'];
 
-function AuthenticationService($resource, $rootScope, $http, Config) {
-  var Authentication = $resource(Config.serverURL + '/:action', {action: '@action'});
+  function AuthenticationService($resource, AuthConfig) {
+    var Authentication = $resource(AuthConfig.serverURL + '/oauth/token');
 
-  return {
-    login: function (username, password) {
-      var auth = new Authentication({username: username, password: password});
-      return auth.$save({action: 'login'});
-    },
+    return {
+      login: login
+    };
 
-    token: function (authParams) {
+    /**
+     * Autenticacion basada en username/password
+     */
+    function login(username, password) {
       var auth = new Authentication({
-        username: authParams.username,
-        accessToken: authParams.accessToken
+        grantType: 'password',
+        username: username,
+        password: password
       });
-      return auth.$save({action: 'token'});
-    },
+      var rsp = auth.$save();
+      rsp.then(loginSuccess);
+      return rsp;
+    }
 
-    logout: function () {
-      var authParams = this.getCurrentUser();
-      var auth = new Authentication({
-        username: authParams.username,
-        accessToken: authParams.accessToken
-      });
-      $rootScope.AuthParams = {};
-      localStorage.removeItem(Config.authParamsKey);
-      return auth.$save({action: 'logout'});
-    },
+    /**
+     * Login success callback para registrar en el localStorage los
+     * datos de autenticación.
+     *
+     * @param {object} data - datos de autenticacion
+     */
+    function loginSuccess(data) {
+      localStorage.setItem(AuthConfig.preffix, JSON.stringify(data));
+    }
 
-    getCurrentUser: function () {
-      var user = $rootScope.AuthParams;
+    /**
+     * retorna la informacion de autenticacion.
+     *
+     * @returns {object}
+     */
+    function getCurrent() {
+      var user = localStorage.getItem(AuthConfig.preffix);
 
-      if (!user || Object.keys(user).length === 0) {
-        user = JSON.parse(localStorage.getItem(Config.authParamsKey)) || undefined;
-
-        if (user) {
-          $http.defaults.headers.common.Authorization = 'Bearer ' + user.accessToken;
-        }
+      if (user) {
+        user = JSON.parse(user);
       }
       return user;
-    },
-
-    isLoggedIn: function() {
-      var user = this.getCurrentUser();
-      return user && user.accessToken !== undefined;
     }
-  };
-}
 
-}());
+    /**
+     * helper para determinar si el user actual se encuentra autenticado.
+     */
+    function isLoggedIn() {
+      var authenticate = this.getCurrent();
+      return !!authenticate;
+    }
+  }
+} ());
