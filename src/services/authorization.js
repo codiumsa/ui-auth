@@ -22,6 +22,10 @@
       /**
        * Retorna true si el usuario actual de la aplicación posee el permiso dado como
        * parámetro.
+       *
+       * @param {string} permission - El permiso a corroborar
+       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
+       * @returns {boolean}
        **/
       hasPermission: function (permission, userToCheck) {
         var user = userToCheck || AuthenticationService.getCurrent();
@@ -33,6 +37,13 @@
         return permissions.indexOf(permission.trim()) >= 0;
       },
 
+      /**
+       * Verifica si el usuario dado como parametro posee los permisos en cuestion.
+       *
+       * @param {string[]} permissions - lista de permisos a controlar
+       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
+       * @returns {boolean}
+       */
       hasPermissions: function (permissions, userToCheck) {
         var self = this;
         var authorized = true;
@@ -47,6 +58,13 @@
         return authorized;
       },
 
+      /**
+       * Helper para determinar si el usuario posee al menos un permiso.
+       *
+       * @param {string[]} permissions - lista de permisos
+       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
+       * @returns {boolean}
+       */
       hasAnyPermissions: function (permissions, userToCheck) {
         var self = this;
         return _.some(permissions, function (p) {
@@ -54,8 +72,15 @@
         });
       },
 
+      /**
+       * Verifica si el usuario posee el rol dado como parámetro.
+       *
+       * @param {string} rol - Rol a controlar
+       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
+       * @returns {boolean}
+       */
       hasRol: function (rol, userToCheck) {
-        var user = userToCheck || AuthenticationService.getCurrentUser();
+        var user = userToCheck || AuthenticationService.getCurrent();
         var rols = [];
 
         if (user) {
@@ -64,31 +89,24 @@
         return rols.indexOf(rol.trim()) >= 0;
       },
 
+      /**
+       * Metodo que se encarga de recuperar del servidor los permisos que posee el usuario
+       * actual.
+       *
+       * @returns {Promise}
+       */
       principal: function () {
         return Authorization.get({ action: 'principal' }).$promise;
       },
 
-      // TODO: ver como implementar esto
-      // setupCredentials: function (username, requestToken, accessToken, callback) {
-      //   var AuthParams = {
-      //     username: username,
-      //     requestToken: requestToken,
-      //     accessToken: accessToken
-      //   };
-
-      //   $rootScope.AuthParams = AuthParams;
-      //   localStorage.setItem(Config.authParamsKey, JSON.stringify(AuthParams));
-      //   $http.defaults.headers.common.Authorization = 'Bearer ' + accessToken;
-      //   // cargamos los permisos del usuario
-      //   this.principal().then(function (response) {
-      //     AuthParams.permissions = response.permisos;
-      //     AuthParams.rols = response.roles;
-      //     AuthParams.stamp = response.stamp;
-      //     localStorage.setItem(Config.authParamsKey, JSON.stringify(AuthParams));
-      //     callback(AuthParams);
-      //   });
-      // },
-
+      /**
+       * Helper para determinar si el user actual esta o no autorizado para realizar
+       * un acción en particular.
+       *
+       * @param {boolean} loginRequired - Indica si la acción a realizar requiere que el usuario esté autenticado.
+       * @param {string[]} requiredPermissions - Lista de permisos solicitados por la acción.
+       * @returns {string} -  loginRequired | notAuthorized | authorized
+       */
       authorize: function (loginRequired, requiredPermissions) {
         var user = AuthenticationService.getCurrentUser();
 
