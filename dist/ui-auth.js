@@ -1,68 +1,69 @@
-(function() {
 'use strict';
 
-angular.module('ui.auth', ['ui']);
-angular.module('ui.auth.directives', []);
-angular.module('ui.auth.services', []);
-}());
-(function() {
-'use strict';
+(function () {
+  'use strict';
 
-/**
- * Directiva que se encarga de mostrar/ocultar elementos del DOM en base
- * a los permisos que posee el usuario que ha iniciado sesion.
- *
- * atributos disponibles:
- *  - when-login: hide | show, permite ocultar o mostrar el elemento si el usuario inicio sesion.
- *  - permissions: lista de permisos que indican si el elemento se debe mostrar o no.
- *  - requires-login: indica si para mostrar el elemento, el usuario debe iniciar sesion
- *
- * @ngdoc directive
- * @name ui-auth.directives:auth
- * @description
- * # auth
- */
-angular
-  .module('ui.auth.directives')
-  .directive('auth', auth);
+  angular.module('ui.auth', []);
+  angular.module('ui.auth.directives', []);
+  angular.module('ui.auth.services', []);
+})();
+(function () {
+  'use strict';
 
-auth.$inject = ['AuthenticationService', 'AuthorizationService'];
+  /**
+   * Directiva que se encarga de mostrar/ocultar elementos del DOM en base
+   * a los permisos que posee el usuario que ha iniciado sesion.
+   *
+   * atributos disponibles:
+   *  - when-login: hide | show, permite ocultar o mostrar el elemento si el usuario inicio sesion.
+   *  - permissions: lista de permisos que indican si el elemento se debe mostrar o no.
+   *  - requires-login: indica si para mostrar el elemento, el usuario debe iniciar sesion
+   *
+   * @ngdoc directive
+   * @name ui-auth.directives:auth
+   * @description
+   * # auth
+   */
 
-function auth(AuthenticationService, AuthorizationService) {
-  
-  return {
-    restrict: 'A',
-    link: function postLink(scope, element, attrs) {
-      var requiresLogin = attrs.permissions !== undefined || attrs.requiresLogin !== undefined;
-      var permissions;
-      var loggedIn = AuthenticationService.isLoggedIn();
-      var remove = requiresLogin && !loggedIn;
-      var anyPermissions;
+  angular.module('ui.auth.directives').directive('auth', auth);
 
-      if(attrs.whenLogin) {
-        remove = loggedIn ? attrs.whenLogin === 'hide' : attrs.whenLogin === 'show';
+  auth.$inject = ['AuthenticationService', 'AuthorizationService'];
+
+  function auth(AuthenticationService, AuthorizationService) {
+
+    return {
+      restrict: 'A',
+      link: function postLink(scope, element, attrs) {
+        var requiresLogin = attrs.permissions !== undefined || attrs.requiresLogin !== undefined;
+        var permissions;
+        var loggedIn = AuthenticationService.isLoggedIn();
+        var remove = requiresLogin && !loggedIn;
+        var anyPermissions;
+
+        if (attrs.whenLogin) {
+          remove = loggedIn ? attrs.whenLogin === 'hide' : attrs.whenLogin === 'show';
+        }
+
+        if (attrs.permissions) {
+          permissions = attrs.permissions.split(',');
+        }
+
+        if (permissions) {
+          remove = !AuthorizationService.hasPermissions(permissions);
+        }
+
+        if (attrs.anyPermissions) {
+          anyPermissions = attrs.anyPermissions.split(',');
+          remove = !AuthorizationService.hasAnyPermissions(anyPermissions);
+        }
+
+        if (remove) {
+          element.remove();
+        }
       }
-      
-      if(attrs.permissions) {
-        permissions = attrs.permissions.split(',');
-      }
-
-      if(permissions) {
-        remove = !AuthorizationService.hasPermissions(permissions);
-      }
-      
-      if(attrs.anyPermissions) {
-        anyPermissions = attrs.anyPermissions.split(',');
-        remove = !AuthorizationService.hasAnyPermissions(anyPermissions);
-      }
-
-      if(remove) {
-        element.remove();
-      }
-    }
-  };
-}
-}());
+    };
+  }
+})();
 
 (function () {
   'use strict';
@@ -74,9 +75,8 @@ function auth(AuthenticationService, AuthorizationService) {
    * # Authentication
    * Service in the ui.auth.
    */
-  angular
-    .module('ui.auth.services')
-    .service('AuthenticationService', AuthenticationService);
+
+  angular.module('ui.auth.services').service('AuthenticationService', AuthenticationService);
 
   AuthenticationService.$injec = ['$resource', 'AuthConfig'];
 
@@ -133,7 +133,7 @@ function auth(AuthenticationService, AuthorizationService) {
       return !!authenticate;
     }
   }
-} ());
+})();
 
 (function () {
   'use strict';
@@ -145,15 +145,13 @@ function auth(AuthenticationService, AuthorizationService) {
    * # Authorization
    * Service in the ui.auth.
    */
-  angular
-    .module('ui.auth.services')
-    .service('AuthorizationService', AuthorizationService);
+
+  angular.module('ui.auth.services').service('AuthorizationService', AuthorizationService);
 
   AuthorizationService.$inject = ['$resource', 'AuthenticationService', 'AuthConfig'];
 
   function AuthorizationService($resource, AuthenticationService, AuthConfig) {
-    var Authorization = $resource(AuthConfig.serverURL + '/authorization/:action',
-      { action: '@action' });
+    var Authorization = $resource(AuthConfig.serverURL + '/authorization/:action', { action: '@action' });
 
     return {
       /**
@@ -164,7 +162,7 @@ function auth(AuthenticationService, AuthorizationService) {
        * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        **/
-      hasPermission: function (permission, userToCheck) {
+      hasPermission: function hasPermission(permission, userToCheck) {
         var user = userToCheck || AuthenticationService.getCurrent();
         var permissions = [];
 
@@ -181,7 +179,7 @@ function auth(AuthenticationService, AuthorizationService) {
        * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasPermissions: function (permissions, userToCheck) {
+      hasPermissions: function hasPermissions(permissions, userToCheck) {
         var self = this;
         var authorized = true;
 
@@ -202,7 +200,7 @@ function auth(AuthenticationService, AuthorizationService) {
        * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasAnyPermissions: function (permissions, userToCheck) {
+      hasAnyPermissions: function hasAnyPermissions(permissions, userToCheck) {
         var self = this;
         return _.some(permissions, function (p) {
           return self.hasPermission(p, userToCheck);
@@ -216,7 +214,7 @@ function auth(AuthenticationService, AuthorizationService) {
        * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasRol: function (rol, userToCheck) {
+      hasRol: function hasRol(rol, userToCheck) {
         var user = userToCheck || AuthenticationService.getCurrent();
         var rols = [];
 
@@ -232,7 +230,7 @@ function auth(AuthenticationService, AuthorizationService) {
        *
        * @returns {Promise}
        */
-      principal: function () {
+      principal: function principal() {
         return Authorization.get({ action: 'principal' }).$promise;
       },
 
@@ -244,13 +242,12 @@ function auth(AuthenticationService, AuthorizationService) {
        * @param {string[]} requiredPermissions - Lista de permisos solicitados por la acción.
        * @returns {string} -  loginRequired | notAuthorized | authorized
        */
-      authorize: function (loginRequired, requiredPermissions) {
+      authorize: function authorize(loginRequired, requiredPermissions) {
         var user = AuthenticationService.getCurrentUser();
 
         if (loginRequired === true && user === undefined) {
           return this.enums.LOGIN_REQUIRED;
-        } else if ((loginRequired && user !== undefined) &&
-          (requiredPermissions === undefined || requiredPermissions.length === 0)) {
+        } else if (loginRequired && user !== undefined && (requiredPermissions === undefined || requiredPermissions.length === 0)) {
           return this.enums.AUTHORIZED;
         } else if (requiredPermissions) {
           var isAuthorized = this.hasPermissions(requiredPermissions, user);
@@ -265,8 +262,7 @@ function auth(AuthenticationService, AuthorizationService) {
       }
     };
   }
-} ());
-
+})();
 (function () {
   'use strict';
 
@@ -278,107 +274,106 @@ function auth(AuthenticationService, AuthorizationService) {
    * @description
    * # AuthConfig
    */
-  angular.module('ui.auth')
-    .provider('AuthConfig', function () {
 
-      var options = {};
+  angular.module('ui.auth').provider('AuthConfig', function () {
 
-      this.config = function (opt) {
-        angular.extend(options, opt);
-      };
+    var options = {};
 
-      this.$get = [function () {
-        return options;
-      }];
-    });
-} ());
+    this.config = function (opt) {
+      angular.extend(options, opt);
+    };
 
-(function() {
-'use strict';
+    this.$get = [function () {
+      return options;
+    }];
+  });
+})();
 
-/**
- * @ngdoc service
- * @name ui.auth.services.HttpInterceptor
- * @description
- * # HttpInterceptor
- * Factory in the ui.auth.
- */
-angular
-  .module('ui.auth.services')
-  .factory('HttpInterceptor', HttpInterceptor);
-  
-HttpInterceptor.$inject = ['$q', '$location', '$rootScope', '$injector'];
+(function () {
+  'use strict';
 
-function HttpInterceptor($q, $location, $rootScope, $injector) {
-    
-  // TODO: 
-  // - deberia mandarse a la URL de login de forma generica o preconfigurada
-  // - mejorar la asignaciond el header Autorizacion
-  
-  return {
-    request: function(config) {
+  /**
+   * @ngdoc service
+   * @name ui.auth.services.HttpInterceptor
+   * @description
+   * # HttpInterceptor
+   * Factory in the ui.auth.
+   */
 
-      if($location.path() !== '/ingresar' && $rootScope.AuthParams) {
-        config.headers.Authorization = 'Bearer ' + $rootScope.AuthParams.accessToken;
-      }
-      return config;
-    },
+  angular.module('ui.auth.services').factory('HttpInterceptor', HttpInterceptor);
 
-    requestError: function(rejection) {
+  HttpInterceptor.$inject = ['$q', '$location', '$injector'];
 
-      if(rejection.status === 401) {
-        $location.path('/ingresar');
-      }
-      return $q.reject(rejection);
-    },
+  function HttpInterceptor($q, $location, $injector) {
 
-    response: function(response) {
-      return response;
-    },
+    return {
+      request: function request(config) {
+        var TokenService = $injector.get('TokenService');
+        var token = TokenService.getToken();
 
-    responseError: function(rejection) {
-      var ngNotify = $injector.get('ngNotify');
-      var Config = $injector.get('Config');
-      var $window = $injector.get('$window');
+        if (token) {
+          config.headers.Authorization = 'Bearer ' + token;
+        }
+        config.headers['Content-Type'] = 'application/json';
+        return config;
+      },
 
-      if(rejection.status === 500 && rejection.config.method === 'POST' &&
-         rejection.config.url.endsWith('rest/token')) {
-           // error al renovar el access_token. Simplemente desloguear
-          localStorage.removeItem(Config.authParamsKey);
-          $location.path('/');
-          $window.location.reload();     
-      }
+      requestError: function requestError(rejection) {
+        var AuthConfig = $injector.get('AuthConfig');
 
-      if(rejection.status === 401) {
-        if(rejection.data && rejection.data.code === 403) {
-          // error de autorización
-          ngNotify.set(rejection.data.error, 'error');
-          $location.path('/');
-          return $q.reject(rejection);
+        if (rejection.status === 401) {
+          $location.path(AuthConfig.loginPath);
+        }
+        return $q.reject(rejection);
+      },
+
+      response: function response(_response) {
+        return _response;
+      },
+
+      responseError: function responseError(rejection) {
+        var AuthConfig = $injector.get('AuthConfig');
+        var $window = $injector.get('$window');
+
+        // verificamos si la renovación del access token falló
+        if (rejection.status === 500 && rejection.config.method === 'POST' && rejection.config.url === AuthConfig.serverURL + '/token') {
+          $location.path(AuthConfig.loginPath);
+          $window.location.reload();
         }
 
-        if($location.path() === '/ingresar') {
-          return $q.reject(rejection);
+        if (rejection.status === 401) {
+          // verificamos si fue un error de autorización
+          if (rejection.data && rejection.data.code === 403) {
+            //ngNotify.set(rejection.data.error, 'error');
+            // TODO: mandar el error de autorización en un evento, para poder manejar en el cliente.
+            $location.path('/');
+            return $q.reject(rejection);
+          }
+
+          if ($location.path() === AuthConfig.loginPath) {
+            return $q.reject(rejection);
+          }
+
+          // TODO: si el access_token expiró, renegociar con el backend.
+
+          // var deferred = $q.defer();
+          // var AuthenticationService = $injector.get('AuthenticationService');
+          // var $http = $injector.get('$http');
+          // console.log($rootScope.AuthParams);
+          // var auth = AuthenticationService.token($rootScope.AuthParams);
+          // auth.then(function(response) {
+          //   $rootScope.AuthParams.accessToken = response.accessToken;
+          //   localStorage.setItem(Config.authParamsKey, JSON.stringify($rootScope.AuthParams));
+          //   $http.defaults.headers.common.Authorization = 'Bearer ' + response.accessToken;
+          // }).then(deferred.resolve, deferred.reject);
+
+          // return deferred.promise.then(function() {
+          //   rejection.config.headers.Authorization = 'Bearer ' + $rootScope.AuthParams.accessToken;
+          //   return $http(rejection.config);
+          // });
         }
-
-        var deferred = $q.defer();
-        var AuthenticationService = $injector.get('AuthenticationService');
-        var $http = $injector.get('$http');
-        console.log($rootScope.AuthParams);
-        var auth = AuthenticationService.token($rootScope.AuthParams);
-        auth.then(function(response) {
-          $rootScope.AuthParams.accessToken = response.accessToken;
-          localStorage.setItem(Config.authParamsKey, JSON.stringify($rootScope.AuthParams));
-          $http.defaults.headers.common.Authorization = 'Bearer ' + response.accessToken;
-        }).then(deferred.resolve, deferred.reject);
-
-        return deferred.promise.then(function() {
-            rejection.config.headers.Authorization = 'Bearer ' + $rootScope.AuthParams.accessToken;
-            return $http(rejection.config);
-        });
+        return $q.reject(rejection);
       }
-      return $q.reject(rejection);
-    }
-  };
-}
-}());
+    };
+  }
+})();

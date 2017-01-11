@@ -1,4 +1,4 @@
-(function () {
+(function() {
   'use strict';
 
   /**
@@ -15,8 +15,7 @@
   AuthorizationService.$inject = ['$resource', 'AuthenticationService', 'AuthConfig'];
 
   function AuthorizationService($resource, AuthenticationService, AuthConfig) {
-    var Authorization = $resource(AuthConfig.serverURL + '/authorization/:action',
-      { action: '@action' });
+    var Authorization = $resource(AuthConfig.serverURL + '/authorization/:action', { action: '@action' });
 
     return {
       /**
@@ -27,7 +26,7 @@
        * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        **/
-      hasPermission: function (permission, userToCheck) {
+      hasPermission: function(permission, userToCheck) {
         var user = userToCheck || AuthenticationService.getCurrent();
         var permissions = [];
 
@@ -44,7 +43,7 @@
        * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasPermissions: function (permissions, userToCheck) {
+      hasPermissions: function(permissions, userToCheck) {
         var self = this;
         var authorized = true;
 
@@ -65,9 +64,9 @@
        * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasAnyPermissions: function (permissions, userToCheck) {
+      hasAnyPermissions: function(permissions, userToCheck) {
         var self = this;
-        return _.some(permissions, function (p) {
+        return _.some(permissions, function(p) {
           return self.hasPermission(p, userToCheck);
         });
       },
@@ -79,7 +78,7 @@
        * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasRol: function (rol, userToCheck) {
+      hasRol: function(rol, userToCheck) {
         var user = userToCheck || AuthenticationService.getCurrent();
         var rols = [];
 
@@ -95,7 +94,7 @@
        *
        * @returns {Promise}
        */
-      principal: function () {
+      principal: function() {
         return Authorization.get({ action: 'principal' }).$promise;
       },
 
@@ -107,7 +106,7 @@
        * @param {string[]} requiredPermissions - Lista de permisos solicitados por la acción.
        * @returns {string} -  loginRequired | notAuthorized | authorized
        */
-      authorize: function (loginRequired, requiredPermissions) {
+      authorize: function(loginRequired, requiredPermissions) {
         var user = AuthenticationService.getCurrentUser();
 
         if (loginRequired === true && user === undefined) {
@@ -128,4 +127,4 @@
       }
     };
   }
-} ());
+}());

@@ -6,6 +6,7 @@ var path = require('path');
 var plumber = require('gulp-plumber');
 var runSequence = require('run-sequence');
 var jshint = require('gulp-jshint');
+var babel = require('gulp-babel');
 
 /**
  * File patterns
@@ -16,10 +17,6 @@ var rootDirectory = path.resolve('./');
 
 // Source directory for build process
 var sourceDirectory = path.join(rootDirectory, './src');
-  
-// Bower directory for build process
-var bowerDirectory = path.join(rootDirectory, './bower');
-
 
 var sourceFiles = [
 
@@ -38,6 +35,9 @@ gulp.task('build', function() {
   gulp.src(sourceFiles)
     .pipe(plumber())
     .pipe(concat('ui-auth.js'))
+    .pipe(babel({
+      presets: ['es2015']
+    }))
     .pipe(gulp.dest('./dist/'))
     .pipe(uglify())
     .pipe(rename('ui-auth.min.js'))
@@ -47,14 +47,14 @@ gulp.task('build', function() {
 /**
  * Process
  */
-gulp.task('process-all', function (done) {
+gulp.task('process-all', function(done) {
   runSequence('jshint', 'build', done);
 });
 
 /**
  * Validate source JavaScript
  */
-gulp.task('jshint', function () {
+gulp.task('jshint', function() {
   return gulp.src(lintFiles)
     .pipe(plumber())
     .pipe(jshint())
@@ -62,6 +62,6 @@ gulp.task('jshint', function () {
     .pipe(jshint.reporter('fail'));
 });
 
-gulp.task('default', function () {
+gulp.task('default', function() {
   runSequence('process-all');
 });

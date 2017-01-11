@@ -1,89 +1,90 @@
 (function() {
-'use strict';
+  'use strict';
 
-/**
- * @ngdoc service
- * @name ui.auth.services.HttpInterceptor
- * @description
- * # HttpInterceptor
- * Factory in the ui.auth.
- */
-angular
-  .module('ui.auth.services')
-  .factory('HttpInterceptor', HttpInterceptor);
-  
-HttpInterceptor.$inject = ['$q', '$location', '$rootScope', '$injector'];
+  /**
+   * @ngdoc service
+   * @name ui.auth.services.HttpInterceptor
+   * @description
+   * # HttpInterceptor
+   * Factory in the ui.auth.
+   */
+  angular
+    .module('ui.auth.services')
+    .factory('HttpInterceptor', HttpInterceptor);
 
-function HttpInterceptor($q, $location, $rootScope, $injector) {
-    
-  // TODO: 
-  // - deberia mandarse a la URL de login de forma generica o preconfigurada
-  // - mejorar la asignaciond el header Autorizacion
-  
-  return {
-    request: function(config) {
+  HttpInterceptor.$inject = ['$q', '$location', '$injector'];
 
-      if($location.path() !== '/ingresar' && $rootScope.AuthParams) {
-        config.headers.Authorization = 'Bearer ' + $rootScope.AuthParams.accessToken;
-      }
-      return config;
-    },
+  function HttpInterceptor($q, $location, $injector) {
 
-    requestError: function(rejection) {
+    return {
+      request: function(config) {
+        let TokenService = $injector.get('TokenService');
+        const token = TokenService.getToken();
 
-      if(rejection.status === 401) {
-        $location.path('/ingresar');
-      }
-      return $q.reject(rejection);
-    },
+        if (token) {
+          config.headers.Authorization = 'Bearer ' + token;
+        }
+        config.headers['Content-Type'] = 'application/json';
+        return config;
+      },
 
-    response: function(response) {
-      return response;
-    },
+      requestError: function(rejection) {
+        let AuthConfig = $injector.get('AuthConfig');
 
-    responseError: function(rejection) {
-      var ngNotify = $injector.get('ngNotify');
-      var Config = $injector.get('Config');
-      var $window = $injector.get('$window');
+        if (rejection.status === 401) {
+          $location.path(AuthConfig.loginPath);
+        }
+        return $q.reject(rejection);
+      },
 
-      if(rejection.status === 500 && rejection.config.method === 'POST' &&
-         rejection.config.url.endsWith('rest/token')) {
-           // error al renovar el access_token. Simplemente desloguear
-          localStorage.removeItem(Config.authParamsKey);
-          $location.path('/');
-          $window.location.reload();     
-      }
+      response: function(response) {
+        return response;
+      },
 
-      if(rejection.status === 401) {
-        if(rejection.data && rejection.data.code === 403) {
-          // error de autorización
-          ngNotify.set(rejection.data.error, 'error');
-          $location.path('/');
-          return $q.reject(rejection);
+      responseError: function(rejection) {
+        let AuthConfig = $injector.get('AuthConfig');
+        var $window = $injector.get('$window');
+
+        // verificamos si la renovación del access token falló
+        if (rejection.status === 500 && rejection.config.method === 'POST' &&
+          rejection.config.url === `${AuthConfig.serverURL}/token`) {
+          $location.path(AuthConfig.loginPath);
+          $window.location.reload();
         }
 
-        if($location.path() === '/ingresar') {
-          return $q.reject(rejection);
+        if (rejection.status === 401) {
+          // verificamos si fue un error de autorización
+          if (rejection.data && rejection.data.code === 403) {
+            //ngNotify.set(rejection.data.error, 'error');
+            // TODO: mandar el error de autorización en un evento, para poder manejar en el cliente.
+            $location.path('/');
+            return $q.reject(rejection);
+          }
+
+          if ($location.path() === AuthConfig.loginPath) {
+            return $q.reject(rejection);
+          }
+
+          // TODO: si el access_token expiró, renegociar con el backend.
+
+          // var deferred = $q.defer();
+          // var AuthenticationService = $injector.get('AuthenticationService');
+          // var $http = $injector.get('$http');
+          // console.log($rootScope.AuthParams);
+          // var auth = AuthenticationService.token($rootScope.AuthParams);
+          // auth.then(function(response) {
+          //   $rootScope.AuthParams.accessToken = response.accessToken;
+          //   localStorage.setItem(Config.authParamsKey, JSON.stringify($rootScope.AuthParams));
+          //   $http.defaults.headers.common.Authorization = 'Bearer ' + response.accessToken;
+          // }).then(deferred.resolve, deferred.reject);
+
+          // return deferred.promise.then(function() {
+          //   rejection.config.headers.Authorization = 'Bearer ' + $rootScope.AuthParams.accessToken;
+          //   return $http(rejection.config);
+          // });
         }
-
-        var deferred = $q.defer();
-        var AuthenticationService = $injector.get('AuthenticationService');
-        var $http = $injector.get('$http');
-        console.log($rootScope.AuthParams);
-        var auth = AuthenticationService.token($rootScope.AuthParams);
-        auth.then(function(response) {
-          $rootScope.AuthParams.accessToken = response.accessToken;
-          localStorage.setItem(Config.authParamsKey, JSON.stringify($rootScope.AuthParams));
-          $http.defaults.headers.common.Authorization = 'Bearer ' + response.accessToken;
-        }).then(deferred.resolve, deferred.reject);
-
-        return deferred.promise.then(function() {
-            rejection.config.headers.Authorization = 'Bearer ' + $rootScope.AuthParams.accessToken;
-            return $http(rejection.config);
-        });
+        return $q.reject(rejection);
       }
-      return $q.reject(rejection);
-    }
-  };
-}
+    };
+  }
 }());
