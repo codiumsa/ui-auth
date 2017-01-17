@@ -1,4 +1,4 @@
-(function () {
+(function() {
   'use strict';
 
   /**
@@ -46,25 +46,13 @@
     }
 
     /**
-     * retorna la informacion de autenticacion.
+     * Retorna el usuario actual.
      *
-     * @returns {object}
+     * @returns {object} Promise que se puede utilizar para recuperar el estado actual.
      */
-    function getCurrent() {
-      var user = localStorage.getItem(AuthConfig.preffix);
-
-      if (user) {
-        user = JSON.parse(user);
-      }
-      return user;
-    }
-
-    /**
-     * helper para determinar si el user actual se encuentra autenticado.
-     */
-    function isLoggedIn() {
-      var authenticate = this.getCurrent();
-      return !!authenticate;
+    function getCurrentUser() {
+      let resource = $resource(AuthConfig.serverURL + '/oauth/user');
+      return resource.get().$promise;
     }
   }
-} ());
+}());
