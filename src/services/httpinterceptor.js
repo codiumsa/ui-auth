@@ -55,7 +55,6 @@
         if (rejection.status === 401) {
           // verificamos si fue un error de autorización
           if (rejection.data && rejection.data.code === 403) {
-            //ngNotify.set(rejection.data.error, 'error');
             // TODO: mandar el error de autorización en un evento, para poder manejar en el cliente.
             $location.path('/');
             return $q.reject(rejection);
@@ -64,24 +63,14 @@
           if ($location.path() === AuthConfig.loginPath) {
             return $q.reject(rejection);
           }
-
-          // TODO: si el access_token expiró, renegociar con el backend.
-
-          // var deferred = $q.defer();
-          // var AuthenticationService = $injector.get('AuthenticationService');
-          // var $http = $injector.get('$http');
-          // console.log($rootScope.AuthParams);
-          // var auth = AuthenticationService.token($rootScope.AuthParams);
-          // auth.then(function(response) {
-          //   $rootScope.AuthParams.accessToken = response.accessToken;
-          //   localStorage.setItem(Config.authParamsKey, JSON.stringify($rootScope.AuthParams));
-          //   $http.defaults.headers.common.Authorization = 'Bearer ' + response.accessToken;
-          // }).then(deferred.resolve, deferred.reject);
-
-          // return deferred.promise.then(function() {
-          //   rejection.config.headers.Authorization = 'Bearer ' + $rootScope.AuthParams.accessToken;
-          //   return $http(rejection.config);
-          // });
+          var deferred = $q.defer();
+          var AuthenticationService = $injector.get('AuthenticationService');
+          var TokenService = $injector.get('TokenService');
+          var rsp = AuthenticationService.refresh(TokenService.getRefreshToken());
+          rsp.then(deferred.resolve, deferred.reject);
+          return deferred.promise.then(function() {
+            return $http(rejection.config);
+          });
         }
         return $q.reject(rejection);
       }

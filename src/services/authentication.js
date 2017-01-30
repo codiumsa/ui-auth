@@ -18,17 +18,36 @@
     var Authentication = $resource(AuthConfig.serverURL + '/oauth/token');
 
     return {
-      login: login
+      login: login,
+      refresh: refresh
     };
 
     /**
      * Autenticacion basada en username/password
+     * 
+     * @param {string} username
+     * @param {string} password
      */
     function login(username, password) {
       var auth = new Authentication({
         grantType: 'password',
         username: username,
         password: password
+      });
+      var rsp = auth.$save();
+      rsp.then(loginSuccess);
+      return rsp;
+    }
+
+    /**
+     * Renovación de access_token
+     * 
+     * @param {string} refreshToken
+     */
+    function refresh(refreshToken) {
+      var auth = new Authentication({
+        grantType: 'refresh_token',
+        refreshToken: refreshToken
       });
       var rsp = auth.$save();
       rsp.then(loginSuccess);

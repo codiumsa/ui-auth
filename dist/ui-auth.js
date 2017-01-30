@@ -84,17 +84,36 @@
     var Authentication = $resource(AuthConfig.serverURL + '/oauth/token');
 
     return {
-      login: login
+      login: login,
+      refresh: refresh
     };
 
     /**
      * Autenticacion basada en username/password
+     * 
+     * @param {string} username
+     * @param {string} password
      */
     function login(username, password) {
       var auth = new Authentication({
         grantType: 'password',
         username: username,
         password: password
+      });
+      var rsp = auth.$save();
+      rsp.then(loginSuccess);
+      return rsp;
+    }
+
+    /**
+     * Renovación de access_token
+     * 
+     * @param {string} refreshToken
+     */
+    function refresh(refreshToken) {
+      var auth = new Authentication({
+        grantType: 'refresh_token',
+        refreshToken: refreshToken
       });
       var rsp = auth.$save();
       rsp.then(loginSuccess);
@@ -112,25 +131,13 @@
     }
 
     /**
-     * retorna la informacion de autenticacion.
+     * Retorna el usuario actual.
      *
-     * @returns {object}
+     * @returns {object} Promise que se puede utilizar para recuperar el estado actual.
      */
-    function getCurrent() {
-      var user = localStorage.getItem(AuthConfig.preffix);
-
-      if (user) {
-        user = JSON.parse(user);
-      }
-      return user;
-    }
-
-    /**
-     * helper para determinar si el user actual se encuentra autenticado.
-     */
-    function isLoggedIn() {
-      var authenticate = this.getCurrent();
-      return !!authenticate;
+    function getCurrentUser() {
+      var resource = $resource(AuthConfig.serverURL + '/oauth/user');
+      return resource.get().$promise;
     }
   }
 })();
@@ -344,7 +351,6 @@
         if (rejection.status === 401) {
           // verificamos si fue un error de autorización
           if (rejection.data && rejection.data.code === 403) {
-            //ngNotify.set(rejection.data.error, 'error');
             // TODO: mandar el error de autorización en un evento, para poder manejar en el cliente.
             $location.path('/');
             return $q.reject(rejection);
@@ -353,24 +359,14 @@
           if ($location.path() === AuthConfig.loginPath) {
             return $q.reject(rejection);
           }
-
-          // TODO: si el access_token expiró, renegociar con el backend.
-
-          // var deferred = $q.defer();
-          // var AuthenticationService = $injector.get('AuthenticationService');
-          // var $http = $injector.get('$http');
-          // console.log($rootScope.AuthParams);
-          // var auth = AuthenticationService.token($rootScope.AuthParams);
-          // auth.then(function(response) {
-          //   $rootScope.AuthParams.accessToken = response.accessToken;
-          //   localStorage.setItem(Config.authParamsKey, JSON.stringify($rootScope.AuthParams));
-          //   $http.defaults.headers.common.Authorization = 'Bearer ' + response.accessToken;
-          // }).then(deferred.resolve, deferred.reject);
-
-          // return deferred.promise.then(function() {
-          //   rejection.config.headers.Authorization = 'Bearer ' + $rootScope.AuthParams.accessToken;
-          //   return $http(rejection.config);
-          // });
+          var deferred = $q.defer();
+          var AuthenticationService = $injector.get('AuthenticationService');
+          var TokenService = $injector.get('TokenService');
+          var rsp = AuthenticationService.refresh(TokenService.getRefreshToken());
+          rsp.then(deferred.resolve, deferred.reject);
+          return deferred.promise.then(function () {
+            return $http(rejection.config);
+          });
         }
         return $q.reject(rejection);
       }

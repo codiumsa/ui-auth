@@ -25,7 +25,7 @@ function config(AuthConfigProvider) {
 
 ### TokenService
 
-ui-auth necesita saber cómo obtener el token de la sesión actual, para eso se debe definir el siguiente servicio.
+ui-auth necesita saber cómo obtener el token/refreshToken de la sesión actual, para eso se debe definir el siguiente servicio.
 
 ```javascript
 angular
@@ -36,6 +36,10 @@ angular
     return {
       getToken: function() {
         return '123456789';
+      },
+
+      getRefreshToken: function() {
+        return 'adsfasdf';
       }
     }
   }    
