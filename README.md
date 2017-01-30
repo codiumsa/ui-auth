@@ -40,6 +40,14 @@ angular
 
       getRefreshToken: function() {
         return 'adsfasdf';
+      },
+
+      /**
+       * Método llamado cada vez que se actualiza el par access_token/refresh_token.
+       * @param {object} token
+       */
+      setToken(token) {
+        // actualizar token
       }
     }
   }    

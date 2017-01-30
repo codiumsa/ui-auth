@@ -42,8 +42,9 @@
       },
 
       responseError: function(rejection) {
-        let AuthConfig = $injector.get('AuthConfig');
-        var $window = $injector.get('$window');
+        const AuthConfig = $injector.get('AuthConfig');
+        const $window = $injector.get('$window');
+        const $http = $injector.get('$http');
 
         // verificamos si la renovación del access token falló
         if (rejection.status === 500 && rejection.config.method === 'POST' &&
@@ -67,6 +68,10 @@
           var AuthenticationService = $injector.get('AuthenticationService');
           var TokenService = $injector.get('TokenService');
           var rsp = AuthenticationService.refresh(TokenService.getRefreshToken());
+          rsp.then((token) => {
+            TokenService.setToken(token);
+            return token;
+          });
           rsp.then(deferred.resolve, deferred.reject);
           return deferred.promise.then(function() {
             return $http(rejection.config);
