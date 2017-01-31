@@ -68,12 +68,14 @@
           var AuthenticationService = $injector.get('AuthenticationService');
           var TokenService = $injector.get('TokenService');
           var rsp = AuthenticationService.refresh(TokenService.getRefreshToken());
+          // {token: ... , refreshToken: ...}
           rsp.then((token) => {
             TokenService.setToken(token);
             return token;
           });
           rsp.then(deferred.resolve, deferred.reject);
-          return deferred.promise.then(function() {
+          return deferred.promise.then(function(token) {
+            rejection.config.headers.Authorization = 'Bearer ' + token.token;
             return $http(rejection.config);
           });
         }
