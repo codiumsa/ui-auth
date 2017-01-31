@@ -27,6 +27,7 @@
 
   function AuthenticationService($resource, AuthConfig, $injector) {
     var Authentication = $resource(AuthConfig.serverURL + '/oauth/token');
+    var refreshing = false;
 
     return {
       login: login,
@@ -58,11 +59,20 @@
      * @param {string} refreshToken
      */
     function refresh(refreshToken) {
+
+      if (refreshing) {
+        return;
+      }
+      refreshing = true;
       var auth = new Authentication({
         grantType: 'refresh_token',
         refreshToken: refreshToken
       });
       var rsp = auth.$save();
+      rsp.then(function (data) {
+        refreshing = false;
+        return data;
+      });
       rsp.then(loginSuccess);
       return rsp;
     }
