@@ -340,8 +340,14 @@
 
     return {
       restrict: 'A',
+      scope: {
+        // expresion que se evalua a un array de strings, o un string donde los valores se separan por comas.
+        somePermissions: '=',
+        // expresion que se evalua a un array de strings, o un string donde los valores se separan por comas.
+        permissions: '='
+      },
       link: function link(scope, element, attrs) {
-        var requiresLogin = attrs.permissions !== undefined || attrs.requiresLogin !== undefined;
+        var requiresLogin = scope.permissions !== undefined || scope.somePermissions !== undefined || attrs.requiresLogin !== undefined;
         var permissions;
         var loggedIn = AuthenticationService.isLoggedIn();
         var remove = requiresLogin && !loggedIn;
@@ -351,16 +357,24 @@
           remove = loggedIn ? attrs.whenLogin === 'hide' : attrs.whenLogin === 'show';
         }
 
-        if (attrs.permissions) {
-          permissions = attrs.permissions.split(',');
+        if (scope.permissions) {
+          permissions = scope.permissions;
+
+          if (!angular.isArray(permissions)) {
+            permissions = scope.permissions.split(',');
+          }
         }
 
         if (permissions) {
           remove = !AuthorizationService.hasPermissions(permissions);
         }
 
-        if (attrs.somePermissions) {
-          somePermissions = attrs.somePermissions.split(',');
+        if (scope.somePermissions) {
+          somePermissions = scope.somePermissions;
+
+          if (!angular.isArray(somePermissions)) {
+            somePermissions = scope.somePermissions.split(',');
+          }
           remove = !AuthorizationService.hasSomePermissions(somePermissions);
         }
 
