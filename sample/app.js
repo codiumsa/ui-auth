@@ -1,6 +1,6 @@
 (function() {
   var app = angular
-    .module('uiAuthSample', ['ui.auth', 'ui.auth.services', 'ui.auth.directives']);
+    .module('uiAuthSample', ['ui.auth']);
 
   //// config
   app.config(config);
@@ -23,6 +23,24 @@
         return '123456789';
       }
     }
+  }
+
+  app.factory('CurrentUserService', CurrentUserService);
+
+  function CurrentUserService() {
+    return {
+      getRols: function() {
+        return ['admin'];
+      },
+
+      getPermissions: function() {
+        return ['read', 'create', 'edit', 'delete'];
+      },
+
+      isLoggedIn: function() {
+        return true;
+      }
+    };
   }
 
   //// controller 

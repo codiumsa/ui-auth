@@ -10,11 +10,11 @@
    */
   angular
     .module('ui.auth.services')
-    .service('AuthorizationService', AuthorizationService);
+    .factory('AuthorizationService', AuthorizationService);
 
-  AuthorizationService.$inject = ['$resource', 'AuthenticationService', 'AuthConfig'];
+  AuthorizationService.$inject = ['$resource', 'AuthConfig', '$injector'];
 
-  function AuthorizationService($resource, AuthenticationService, AuthConfig) {
+  function AuthorizationService($resource, AuthConfig, $injector) {
     var Authorization = $resource(AuthConfig.serverURL + '/authorization/:action', { action: '@action' });
 
     return {
@@ -23,33 +23,25 @@
        * parámetro.
        *
        * @param {string} permission - El permiso a corroborar
-       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        **/
-      hasPermission: function(permission, userToCheck) {
-        var user = userToCheck || AuthenticationService.getCurrent();
-        var permissions = [];
-
-        if (user) {
-          permissions = user.permissions || [];
-        }
+      hasPermission: function(permission) {
+        const CurrentUserService = $injector.get('CurrentUserService');
+        const permissions = CurrentUserService.getPermissions();
         return permissions.indexOf(permission.trim()) >= 0;
       },
 
       /**
-       * Verifica si el usuario dado como parametro posee los permisos en cuestion.
+       * Verifica si el usuario dado como parametro posee los permisos en cuestión.
        *
        * @param {string[]} permissions - lista de permisos a controlar
-       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasPermissions: function(permissions, userToCheck) {
-        var self = this;
+      hasPermissions: function(permissions) {
         var authorized = true;
 
         for (var i = 0; i < permissions.length; i++) {
-
-          if (!self.hasPermission(permissions[i], userToCheck)) {
+          if (!this.hasPermission(permissions[i])) {
             authorized = false;
             break;
           }
@@ -61,61 +53,42 @@
        * Helper para determinar si el usuario posee al menos un permiso.
        *
        * @param {string[]} permissions - lista de permisos
-       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasAnyPermissions: function(permissions, userToCheck) {
-        var self = this;
-        return _.some(permissions, function(p) {
-          return self.hasPermission(p, userToCheck);
-        });
+      hasSomePermissions: function(permissions) {
+        return _.some(permissions, (p) => this.hasPermission(p));
       },
 
       /**
        * Verifica si el usuario posee el rol dado como parámetro.
        *
        * @param {string} rol - Rol a controlar
-       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasRol: function(rol, userToCheck) {
-        var user = userToCheck || AuthenticationService.getCurrent();
-        var rols = [];
-
-        if (user) {
-          rols = user.rols || [];
-        }
+      hasRol: function(rol) {
+        const CurrentUserService = $injector.get('CurrentUserService');
+        const rols = CurrentUserService.getRols();
         return rols.indexOf(rol.trim()) >= 0;
       },
 
       /**
-       * Metodo que se encarga de recuperar del servidor los permisos que posee el usuario
-       * actual.
-       *
-       * @returns {Promise}
-       */
-      principal: function() {
-        return Authorization.get({ action: 'principal' }).$promise;
-      },
-
-      /**
        * Helper para determinar si el user actual esta o no autorizado para realizar
-       * un acción en particular.
+       * una acción en particular.
        *
        * @param {boolean} loginRequired - Indica si la acción a realizar requiere que el usuario esté autenticado.
        * @param {string[]} requiredPermissions - Lista de permisos solicitados por la acción.
        * @returns {string} -  loginRequired | notAuthorized | authorized
        */
       authorize: function(loginRequired, requiredPermissions) {
-        var user = AuthenticationService.getCurrentUser();
+        const CurrentUserService = $injector.get('CurrentUserService');
 
         if (loginRequired === true && user === undefined) {
           return this.enums.LOGIN_REQUIRED;
-        } else if ((loginRequired && user !== undefined) &&
+        } else if ((loginRequired && CurrentUserService.isLoggedIn()) &&
           (requiredPermissions === undefined || requiredPermissions.length === 0)) {
           return this.enums.AUTHORIZED;
         } else if (requiredPermissions) {
-          var isAuthorized = this.hasPermissions(requiredPermissions, user);
+          var isAuthorized = this.hasPermissions(requiredPermissions);
           return isAuthorized ? this.enums.AUTHORIZED : this.enums.NOT_AUTHORIZED;
         }
       },

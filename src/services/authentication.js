@@ -10,16 +10,18 @@
    */
   angular
     .module('ui.auth.services')
-    .service('AuthenticationService', AuthenticationService);
+    .factory('AuthenticationService', AuthenticationService);
 
-  AuthenticationService.$injec = ['$resource', 'AuthConfig'];
+  AuthenticationService.$inject = ['$resource', 'AuthConfig', '$injector'];
 
-  function AuthenticationService($resource, AuthConfig) {
+  function AuthenticationService($resource, AuthConfig, $injector) {
     var Authentication = $resource(AuthConfig.serverURL + '/oauth/token');
 
     return {
-      login: login,
-      refresh: refresh
+      login,
+      refresh,
+      fetchCurrentUser,
+      isLoggedIn
     };
 
     /**
@@ -55,23 +57,32 @@
     }
 
     /**
-     * Login success callback para registrar en el localStorage los
-     * datos de autenticación.
-     *
-     * @param {object} data - datos de autenticacion
-     */
-    function loginSuccess(data) {
-      localStorage.setItem(AuthConfig.preffix, JSON.stringify(data));
-    }
-
-    /**
      * Retorna el usuario actual.
      *
      * @returns {object} Promise que se puede utilizar para recuperar el estado actual.
      */
-    function getCurrentUser() {
+    function fetchCurrentUser() {
       let resource = $resource(AuthConfig.serverURL + '/oauth/user');
       return resource.get().$promise;
+    }
+
+    /**
+     * @returns {boolean} Retorna true, si se ha iniciado sesión. False en caso contrario.
+     */
+    function isLoggedIn() {
+      const CurrentUserService = $injector.get('CurrentUserService');
+      return CurrentUserService.isLoggedIn();
+    }
+
+    /**
+     * Login success callback para registrar en el localStorage los
+     * datos de autenticación.
+     *
+     * @param {object} data - datos de autenticacion
+     * @private
+     */
+    function loginSuccess(data) {
+      localStorage.setItem(AuthConfig.preffix, JSON.stringify(data));
     }
   }
 }());

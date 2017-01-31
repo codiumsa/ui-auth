@@ -3,66 +3,11 @@
 (function () {
   'use strict';
 
-  angular.module('ui.auth', []);
-  angular.module('ui.auth.directives', []);
   angular.module('ui.auth.services', []);
-})();
-(function () {
-  'use strict';
 
-  /**
-   * Directiva que se encarga de mostrar/ocultar elementos del DOM en base
-   * a los permisos que posee el usuario que ha iniciado sesion.
-   *
-   * atributos disponibles:
-   *  - when-login: hide | show, permite ocultar o mostrar el elemento si el usuario inicio sesion.
-   *  - permissions: lista de permisos que indican si el elemento se debe mostrar o no.
-   *  - requires-login: indica si para mostrar el elemento, el usuario debe iniciar sesion
-   *
-   * @ngdoc directive
-   * @name ui-auth.directives:auth
-   * @description
-   * # auth
-   */
+  angular.module('ui.auth.directives', ['ui.auth.services']);
 
-  angular.module('ui.auth.directives').directive('auth', auth);
-
-  auth.$inject = ['AuthenticationService', 'AuthorizationService'];
-
-  function auth(AuthenticationService, AuthorizationService) {
-
-    return {
-      restrict: 'A',
-      link: function postLink(scope, element, attrs) {
-        var requiresLogin = attrs.permissions !== undefined || attrs.requiresLogin !== undefined;
-        var permissions;
-        var loggedIn = AuthenticationService.isLoggedIn();
-        var remove = requiresLogin && !loggedIn;
-        var anyPermissions;
-
-        if (attrs.whenLogin) {
-          remove = loggedIn ? attrs.whenLogin === 'hide' : attrs.whenLogin === 'show';
-        }
-
-        if (attrs.permissions) {
-          permissions = attrs.permissions.split(',');
-        }
-
-        if (permissions) {
-          remove = !AuthorizationService.hasPermissions(permissions);
-        }
-
-        if (attrs.anyPermissions) {
-          anyPermissions = attrs.anyPermissions.split(',');
-          remove = !AuthorizationService.hasAnyPermissions(anyPermissions);
-        }
-
-        if (remove) {
-          element.remove();
-        }
-      }
-    };
-  }
+  angular.module('ui.auth', ['ngResource', 'ui.auth.services', 'ui.auth.directives']);
 })();
 
 (function () {
@@ -76,16 +21,18 @@
    * Service in the ui.auth.
    */
 
-  angular.module('ui.auth.services').service('AuthenticationService', AuthenticationService);
+  angular.module('ui.auth.services').factory('AuthenticationService', AuthenticationService);
 
-  AuthenticationService.$injec = ['$resource', 'AuthConfig'];
+  AuthenticationService.$inject = ['$resource', 'AuthConfig', '$injector'];
 
-  function AuthenticationService($resource, AuthConfig) {
+  function AuthenticationService($resource, AuthConfig, $injector) {
     var Authentication = $resource(AuthConfig.serverURL + '/oauth/token');
 
     return {
       login: login,
-      refresh: refresh
+      refresh: refresh,
+      fetchCurrentUser: fetchCurrentUser,
+      isLoggedIn: isLoggedIn
     };
 
     /**
@@ -121,23 +68,32 @@
     }
 
     /**
-     * Login success callback para registrar en el localStorage los
-     * datos de autenticación.
-     *
-     * @param {object} data - datos de autenticacion
-     */
-    function loginSuccess(data) {
-      localStorage.setItem(AuthConfig.preffix, JSON.stringify(data));
-    }
-
-    /**
      * Retorna el usuario actual.
      *
      * @returns {object} Promise que se puede utilizar para recuperar el estado actual.
      */
-    function getCurrentUser() {
+    function fetchCurrentUser() {
       var resource = $resource(AuthConfig.serverURL + '/oauth/user');
       return resource.get().$promise;
+    }
+
+    /**
+     * @returns {boolean} Retorna true, si se ha iniciado sesión. False en caso contrario.
+     */
+    function isLoggedIn() {
+      var CurrentUserService = $injector.get('CurrentUserService');
+      return CurrentUserService.isLoggedIn();
+    }
+
+    /**
+     * Login success callback para registrar en el localStorage los
+     * datos de autenticación.
+     *
+     * @param {object} data - datos de autenticacion
+     * @private
+     */
+    function loginSuccess(data) {
+      localStorage.setItem(AuthConfig.preffix, JSON.stringify(data));
     }
   }
 })();
@@ -153,11 +109,11 @@
    * Service in the ui.auth.
    */
 
-  angular.module('ui.auth.services').service('AuthorizationService', AuthorizationService);
+  angular.module('ui.auth.services').factory('AuthorizationService', AuthorizationService);
 
-  AuthorizationService.$inject = ['$resource', 'AuthenticationService', 'AuthConfig'];
+  AuthorizationService.$inject = ['$resource', 'AuthConfig', '$injector'];
 
-  function AuthorizationService($resource, AuthenticationService, AuthConfig) {
+  function AuthorizationService($resource, AuthConfig, $injector) {
     var Authorization = $resource(AuthConfig.serverURL + '/authorization/:action', { action: '@action' });
 
     return {
@@ -166,33 +122,25 @@
        * parámetro.
        *
        * @param {string} permission - El permiso a corroborar
-       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        **/
-      hasPermission: function hasPermission(permission, userToCheck) {
-        var user = userToCheck || AuthenticationService.getCurrent();
-        var permissions = [];
-
-        if (user) {
-          permissions = user.permissions || [];
-        }
+      hasPermission: function hasPermission(permission) {
+        var CurrentUserService = $injector.get('CurrentUserService');
+        var permissions = CurrentUserService.getPermissions();
         return permissions.indexOf(permission.trim()) >= 0;
       },
 
       /**
-       * Verifica si el usuario dado como parametro posee los permisos en cuestion.
+       * Verifica si el usuario dado como parametro posee los permisos en cuestión.
        *
        * @param {string[]} permissions - lista de permisos a controlar
-       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasPermissions: function hasPermissions(permissions, userToCheck) {
-        var self = this;
+      hasPermissions: function hasPermissions(permissions) {
         var authorized = true;
 
         for (var i = 0; i < permissions.length; i++) {
-
-          if (!self.hasPermission(permissions[i], userToCheck)) {
+          if (!this.hasPermission(permissions[i])) {
             authorized = false;
             break;
           }
@@ -204,13 +152,13 @@
        * Helper para determinar si el usuario posee al menos un permiso.
        *
        * @param {string[]} permissions - lista de permisos
-       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasAnyPermissions: function hasAnyPermissions(permissions, userToCheck) {
-        var self = this;
+      hasSomePermissions: function hasSomePermissions(permissions) {
+        var _this = this;
+
         return _.some(permissions, function (p) {
-          return self.hasPermission(p, userToCheck);
+          return _this.hasPermission(p);
         });
       },
 
@@ -218,46 +166,31 @@
        * Verifica si el usuario posee el rol dado como parámetro.
        *
        * @param {string} rol - Rol a controlar
-       * @param {Object} userToCheck - Parametro opcional que indica el usuario sobre el cual se desea hacer la verificación
        * @returns {boolean}
        */
-      hasRol: function hasRol(rol, userToCheck) {
-        var user = userToCheck || AuthenticationService.getCurrent();
-        var rols = [];
-
-        if (user) {
-          rols = user.rols || [];
-        }
+      hasRol: function hasRol(rol) {
+        var CurrentUserService = $injector.get('CurrentUserService');
+        var rols = CurrentUserService.getRols();
         return rols.indexOf(rol.trim()) >= 0;
       },
 
       /**
-       * Metodo que se encarga de recuperar del servidor los permisos que posee el usuario
-       * actual.
-       *
-       * @returns {Promise}
-       */
-      principal: function principal() {
-        return Authorization.get({ action: 'principal' }).$promise;
-      },
-
-      /**
        * Helper para determinar si el user actual esta o no autorizado para realizar
-       * un acción en particular.
+       * una acción en particular.
        *
        * @param {boolean} loginRequired - Indica si la acción a realizar requiere que el usuario esté autenticado.
        * @param {string[]} requiredPermissions - Lista de permisos solicitados por la acción.
        * @returns {string} -  loginRequired | notAuthorized | authorized
        */
       authorize: function authorize(loginRequired, requiredPermissions) {
-        var user = AuthenticationService.getCurrentUser();
+        var CurrentUserService = $injector.get('CurrentUserService');
 
         if (loginRequired === true && user === undefined) {
           return this.enums.LOGIN_REQUIRED;
-        } else if (loginRequired && user !== undefined && (requiredPermissions === undefined || requiredPermissions.length === 0)) {
+        } else if (loginRequired && CurrentUserService.isLoggedIn() && (requiredPermissions === undefined || requiredPermissions.length === 0)) {
           return this.enums.AUTHORIZED;
         } else if (requiredPermissions) {
-          var isAuthorized = this.hasPermissions(requiredPermissions, user);
+          var isAuthorized = this.hasPermissions(requiredPermissions);
           return isAuthorized ? this.enums.AUTHORIZED : this.enums.NOT_AUTHORIZED;
         }
       },
@@ -270,6 +203,7 @@
     };
   }
 })();
+
 (function () {
   'use strict';
 
@@ -282,7 +216,7 @@
    * # AuthConfig
    */
 
-  angular.module('ui.auth').provider('AuthConfig', function () {
+  angular.module('ui.auth.services').provider('AuthConfig', function () {
 
     var options = {};
 
@@ -374,6 +308,65 @@
           });
         }
         return $q.reject(rejection);
+      }
+    };
+  }
+})();
+
+(function () {
+  'use strict';
+
+  /**
+   * Directiva que se encarga de mostrar/ocultar elementos del DOM en base
+   * a los permisos que posee el usuario que ha iniciado sesion.
+   *
+   * atributos disponibles:
+   *  - when-login: hide | show, permite ocultar o mostrar el elemento si el usuario inicio sesion.
+   *  - permissions: lista de permisos que indican si el elemento se debe mostrar o no.
+   *  - requires-login: indica si para mostrar el elemento, el usuario debe iniciar sesion
+   *  - some-permissions: lista de permisos. El elmento se muestra o no, si al menos un permiso se encuentra.
+   *
+   * @ngdoc directive
+   * @name ui-auth.directives:auth
+   * @description
+   * # auth
+   */
+
+  angular.module('ui.auth.directives').directive('auth', auth);
+
+  auth.$inject = ['AuthenticationService', 'AuthorizationService'];
+
+  function auth(AuthenticationService, AuthorizationService) {
+
+    return {
+      restrict: 'A',
+      link: function link(scope, element, attrs) {
+        var requiresLogin = attrs.permissions !== undefined || attrs.requiresLogin !== undefined;
+        var permissions;
+        var loggedIn = AuthenticationService.isLoggedIn();
+        var remove = requiresLogin && !loggedIn;
+        var somePermissions;
+
+        if (attrs.whenLogin) {
+          remove = loggedIn ? attrs.whenLogin === 'hide' : attrs.whenLogin === 'show';
+        }
+
+        if (attrs.permissions) {
+          permissions = attrs.permissions.split(',');
+        }
+
+        if (permissions) {
+          remove = !AuthorizationService.hasPermissions(permissions);
+        }
+
+        if (attrs.somePermissions) {
+          somePermissions = attrs.somePermissions.split(',');
+          remove = !AuthorizationService.hasSomePermissions(somePermissions);
+        }
+
+        if (remove) {
+          element.remove();
+        }
       }
     };
   }

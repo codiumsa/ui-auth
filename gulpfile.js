@@ -23,8 +23,11 @@ var sourceFiles = [
   // Make sure module files are handled first
   path.join(sourceDirectory, '/**/*.module.js'),
 
-  // Then add all JavaScript files
-  path.join(sourceDirectory, '/**/*.js')
+  // Then add all services files
+  path.join(sourceDirectory, '/services/**/*.js'),
+
+  // Then add all directives files
+  path.join(sourceDirectory, '/directives/**/*.js')
 ];
 
 var lintFiles = [

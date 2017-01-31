@@ -1,4 +1,4 @@
-(function () {
+(function() {
   'use strict';
 
   /**
@@ -9,17 +9,17 @@
    * @description
    * # AuthConfig
    */
-  angular.module('ui.auth')
-    .provider('AuthConfig', function () {
+  angular.module('ui.auth.services')
+    .provider('AuthConfig', function() {
 
       var options = {};
 
-      this.config = function (opt) {
+      this.config = function(opt) {
         angular.extend(options, opt);
       };
 
-      this.$get = [function () {
+      this.$get = [function() {
         return options;
       }];
     });
-} ());
+}());

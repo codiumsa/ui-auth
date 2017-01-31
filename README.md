@@ -52,3 +52,31 @@ angular
     }
   }    
 ```
+
+
+
+### CurrentUserService
+
+ui-auth necesita saber cómo obtener los roles/permisos de la sesión actual, para eso se debe definir el siguiente servicio.
+
+```javascript
+angular
+  .module('myApp')
+  .factory('CurrentUserService', CurrentUserService);
+    
+  function CurrentUserService() {
+    return {
+      getRols: function() {
+        return ['admin'];
+      },
+
+      getPermissions: function() {
+        return ['create_users'];
+      },
+
+      isLoggedIn: function() {
+        return true;
+      }
+    }
+  }    
+```
