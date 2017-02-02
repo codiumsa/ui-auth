@@ -93,6 +93,7 @@
      */
     function loginSuccess(data) {
       localStorage.setItem(AuthConfig.preffix, JSON.stringify(data));
+      return data;
     }
   }
 }());
