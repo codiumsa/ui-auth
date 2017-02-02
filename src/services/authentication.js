@@ -17,6 +17,7 @@
   function AuthenticationService($resource, AuthConfig, $injector) {
     var Authentication = $resource(AuthConfig.serverURL + '/oauth/token');
     let refreshing = false;
+    let promise;
 
     return {
       login,
@@ -50,7 +51,7 @@
     function refresh(refreshToken) {
 
       if (refreshing) {
-        return;
+        return promise;
       }
       refreshing = true;
       var auth = new Authentication({
@@ -58,12 +59,11 @@
         refreshToken: refreshToken
       });
       var rsp = auth.$save();
-      rsp.then((data) => {
+      promise = rsp.then((data) => {
         refreshing = false;
         return data;
-      })
-      rsp.then(loginSuccess);
-      return rsp;
+      }).then(loginSuccess);
+      return promise;
     }
 
     /**
