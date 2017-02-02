@@ -64,17 +64,14 @@
           if ($location.path() === AuthConfig.loginPath) {
             return $q.reject(rejection);
           }
-          var deferred = $q.defer();
           var AuthenticationService = $injector.get('AuthenticationService');
           var TokenService = $injector.get('TokenService');
           var rsp = AuthenticationService.refresh(TokenService.getRefreshToken());
           // {token: ... , refreshToken: ...}
-          rsp.then((token) => {
+          return rsp.then((token) => {
             TokenService.setToken(token);
             return token;
-          });
-          rsp.then(deferred.resolve, deferred.reject);
-          return deferred.promise.then(function(token) {
+          }).then((token) => {
             rejection.config.headers.Authorization = 'Bearer ' + token.token;
             return $http(rejection.config);
           });
