@@ -39,8 +39,7 @@
         password: password
       });
       var rsp = auth.$save();
-      rsp.then(loginSuccess);
-      return rsp;
+      return rsp.then(loginSuccess);
     }
 
     /**
