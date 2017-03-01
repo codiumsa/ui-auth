@@ -18,16 +18,24 @@
   app.factory('TokenService', TokenService);
 
   function TokenService() {
+    var token = true;
+
     return {
       getToken: function() {
-        return '123456789';
+        return token;
+      },
+
+      setToken: function(newToken) {
+        token = newToken;
       }
     }
   }
 
   app.factory('CurrentUserService', CurrentUserService);
 
-  function CurrentUserService() {
+  CurrentUserService.$inject = ['TokenService'];
+
+  function CurrentUserService(TokenService) {
     return {
       getRols: function() {
         return ['admin'];
@@ -38,16 +46,16 @@
       },
 
       isLoggedIn: function() {
-        return true;
+        return TokenService.getToken();
       }
     };
   }
 
   //// controller 
   app.controller('SampleController', SampleController);
-  SampleController.$inject = ['$http', '$scope'];
+  SampleController.$inject = ['$http', '$scope', 'TokenService'];
 
-  function SampleController($http, $scope) {
+  function SampleController($http, $scope, TokenService) {
     $scope.test = function() {
       $http({
         method: 'GET',
@@ -56,5 +64,9 @@
         alert(JSON.stringify(data));
       });
     }
+
+    $scope.login = function() {
+      TokenService.setToken(true);
+    };
   }
 }());
