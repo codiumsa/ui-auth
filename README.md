@@ -3,6 +3,7 @@
 Librería que ofrece helpers para autenticación y autorización vía 
 [securium-oauth](https://gitlab.com/codium/securium-oauth)
 
+[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 
 ### configuracion
 
