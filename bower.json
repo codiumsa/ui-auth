@@ -1,5 +1,6 @@
 {
   "name": "ui-auth",
+  "version": "0.2.0",
   "authors": [
     "Jorge Ramirez <jorge@codium.com.py>"
   ],
